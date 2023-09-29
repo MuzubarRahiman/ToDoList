@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title class="center-heading"> Todo List</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* Page background color */
+        body {
+            background-color: #f8f9fa;
+        }
+
+        /* Navbar style */
+        .navbar {
+            background-color: #007bff; /* Background color for the navbar */
+        }
+
+        .navbar-brand {
+            color: #fff; /* Text color for the navbar heading */
+        }
+
+        /* Container style */
+        .container {
+            margin-top: 30px;
+        }
+
+        /* Task list style */
+        .task-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        /* Task item style */
+        .task-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Checkbox style */
+        .task-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        /* Delete and Update button styles */
+        .task-item button {
+            background-color: #dc3545; /* Background color for Delete button */
+            color: #fff; /* Text color for Delete button */
+            border: none;
+            cursor: pointer;
+        }
+
+        .task-item button.update-button {
+            background-color: #007bff; /* Background color for Update button */
+        }
+
+        /* Task input width */
+        .task-input {
+            width: 70%;
+        }
+        
+        /* Center-align the heading */
+        .center-heading {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <a class="navbar-brand" href="#">Todo List</a>
+    </nav>
+    
+    <div class="container">
+        <h1 class="center-heading">Todo List</h1> <!-- Center-aligned heading -->
+        <ul class="task-list" id="task-list"></ul>
+        <div class="input-group mb-3">
+            <input type="text" id="task-input" class="form-control task-input" placeholder="Enter a task">
+            <div class="input-group-append">
+                <button class="btn btn-primary" onclick="addTask()">Add Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript code for interacting with the RESTful API
+        let selectedTaskId = null;
+
+        function fetchTasks() {
+            fetch('/api/tasks')
+                .then(response => response.json())
+                .then(data => {
+                    const taskList = document.getElementById('task-list');
+                    taskList.innerHTML = '';
+                    data.forEach(task => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `
+                            <div class="task-item">
+                                <input type="checkbox" ${task.completed ? 'checked' : ''}>
+                                <span>${task.title}</span>
+                                <button class="btn btn-danger" onclick="deleteTask(${task.id})">Delete</button>
+                                <button class="btn btn-primary update-button" onclick="prepareUpdate(${task.id})">Update</button>
+                            </div>
+                        `;
+                        taskList.appendChild(listItem);
+                    });
+                });
+        }
+
+        function addTask() {
+            const taskInput = document.getElementById('task-input');
+            const taskTitle = taskInput.value;
+            if (taskTitle.trim() !== '') {
+                if (selectedTaskId === null) {
+                    fetch('/api/tasks', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ title: taskTitle, completed: false })
+                    })
+                    .then(() => {
+                        taskInput.value = '';
+                        fetchTasks();
+                    });
+                } else {
+                    fetch(`/api/tasks/${selectedTaskId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ title: taskTitle, completed: false })
+                    })
+                    .then(() => {
+                        taskInput.value = '';
+                        selectedTaskId = null;
+                        fetchTasks();
+                    });
+                }
+            }
+        }
+
+        function deleteTask(id) {
+            fetch(`/api/tasks/${id}`, {
+                method: 'DELETE'
+            })
+            .then(() => {
+                fetchTasks();
+            });
+        }
+
+        function prepareUpdate(id) {
+            selectedTaskId = id;
+            fetch(`/api/tasks/${id}`)
+                .then(response => response.json())
+                .then(task => {
+                    const taskInput = document.getElementById('task-input');
+                    taskInput.value = task.title;
+                });
+        }
+
+        fetchTasks();
+    </script>
+</body>
+</html>
